@@ -1,5 +1,8 @@
-import { Denops, fn } from "https://raw.githubusercontent.com/Shougo/ddu.vim/da6e4ef/denops/ddu/deps.ts";
-import { BaseSource, Item } from "https://raw.githubusercontent.com/Shougo/ddu.vim/a8db8a8/denops/ddu/types.ts";
+import {
+  BaseSource,
+  Item,
+} from "https://deno.land/x/ddu_vim@v0.3.0/types.ts";
+import { Denops, fn } from "https://deno.land/x/ddu_vim@v0.3.0/deps.ts";
 import { relative } from "https://deno.land/std@0.122.0/path/mod.ts#^";
 
 type ActionData = {
