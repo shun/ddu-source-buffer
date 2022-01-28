@@ -1,5 +1,6 @@
 import { Denops, fn } from "https://raw.githubusercontent.com/Shougo/ddu.vim/da6e4ef/denops/ddu/deps.ts";
 import { BaseSource, Item } from "https://raw.githubusercontent.com/Shougo/ddu.vim/a8db8a8/denops/ddu/types.ts";
+import { relative } from "https://deno.land/std@0.122.0/path/mod.ts#^";
 
 type ActionData = {
   bufnr: number;
@@ -34,8 +35,10 @@ export class Source extends BaseSource<Params> {
       const altmarker_ = isAlternate_ ? "#" : "";
       const modmarker_ = isModified_ ? "+" : "";
 
+      const dir = await fn.getcwd(args.denops) as string;
+
       return {
-        word: `${bufnr_} ${curmarker_}${altmarker_} ${modmarker_} ${name_}`,
+        word: `${bufnr_} ${curmarker_}${altmarker_} ${modmarker_} ${relative(dir, path)}`,
         action: {
           bufnr: bufnr_,
           path: path,
