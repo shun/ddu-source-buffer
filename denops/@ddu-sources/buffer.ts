@@ -43,7 +43,7 @@ export class Source extends BaseSource<Params> {
       return {
         word: `${bufnr_} ${curmarker_}${altmarker_} ${modmarker_} ${relative(dir, path)}`,
         action: {
-          bufnr: bufnr_,
+          bufNr: bufnr_,
           path: path,
           isCurrent: isCurrent_,
           isAlternate: isAlternate_,
