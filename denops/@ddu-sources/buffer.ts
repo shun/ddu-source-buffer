@@ -67,7 +67,7 @@ export class Source extends BaseSource<Params> {
       const buffers: Item<ActionData>[] = [];
 
       const altinfo = await fn.getbufinfo(args.denops, "#") as BufInfo[];
-      if (altinfo.length != 0) {
+      if (altinfo.length != 0 && altinfo[0].listed) {
         buffers.push(get_actioninfo(altinfo[0], curnr_, altnr_, currentDir));
       }
 
