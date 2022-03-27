@@ -1,9 +1,6 @@
-import {
-  BaseSource,
-  Item,
-} from "https://deno.land/x/ddu_vim@v1.1.0/types.ts";
-import { Denops, fn } from "https://deno.land/x/ddu_vim@v1.1.0/deps.ts";
-import { relative } from "https://deno.land/std@0.123.0/path/mod.ts#^";
+import { BaseSource, Item } from "https://deno.land/x/ddu_vim@v1.4.0/types.ts";
+import { Denops, fn } from "https://deno.land/x/ddu_vim@v1.4.0/deps.ts";
+import { relative } from "https://deno.land/std@0.132.0/path/mod.ts#^";
 
 type ActionData = {
   bufNr: number;
@@ -18,6 +15,13 @@ type ActionInfo = {
   action: ActionData;
 };
 
+type BufInfo = {
+  bufnr: number;
+  changed: boolean;
+  listed: boolean;
+  name: string;
+};
+
 type Params = Record<never, never>;
 
 export class Source extends BaseSource<Params> {
@@ -26,61 +30,58 @@ export class Source extends BaseSource<Params> {
   gather(args: {
     denops: Denops;
   }): ReadableStream<Item<ActionData>[]> {
-    const get_actioninfo = async(bufnr_: number, path: string): Promise<ActionInfo> => {
-      const curnr_ = await fn.bufnr(args.denops, "%");
-      const altnr_ = await fn.bufnr(args.denops, "#");
-      const isCurrent_ = curnr_ === bufnr_ ? true : false;
-      const isAlternate_ = altnr_ === bufnr_ ? true : false;
-      const isModified_ = await fn.getbufvar(args.denops, bufnr_, "&modified") as boolean;
+    const get_actioninfo = (
+      bufinfo: BufInfo,
+      curnr_: number,
+      altnr_: number,
+      currentDir: string,
+    ): ActionInfo => {
+      const isCurrent_ = curnr_ === bufinfo.bufnr;
+      const isAlternate_ = altnr_ === bufinfo.bufnr;
+      const isModified_ = bufinfo.changed;
 
       const curmarker_ = isCurrent_ ? "%" : "";
       const altmarker_ = isAlternate_ ? "#" : "";
       const modmarker_ = isModified_ ? "+" : "";
 
-      const dir = await fn.getcwd(args.denops) as string;
-
       return {
-        word: `${bufnr_} ${curmarker_}${altmarker_} ${modmarker_} ${relative(dir, path)}`,
+        word: `${bufinfo.bufnr} ${curmarker_}${altmarker_} ${modmarker_} ${
+          relative(currentDir, bufinfo.name)
+        }`,
         action: {
-          bufNr: bufnr_,
-          path: path,
+          bufNr: bufinfo.bufnr,
+          path: bufinfo.name,
           isCurrent: isCurrent_,
           isAlternate: isAlternate_,
           isModified: isModified_,
-        }
+        },
       };
     };
 
-    const get_buflist = async() => {
-      const buffers: Item<ActionData>[] = [];
-      const lastnr_ = await fn.bufnr(args.denops, "$");
+    const get_buflist = async () => {
+      const currentDir = await fn.getcwd(args.denops) as string;
+      const curnr_ = await fn.bufnr(args.denops, "%");
       const altnr_ = await fn.bufnr(args.denops, "#");
+      const lastnr_ = await fn.bufnr(args.denops, "$");
 
-      let path = "";
-      path = await fn.expand(args.denops, `#${altnr_}:p`) as string;
-      if (await fn.filereadable(args.denops, path)) {
-        buffers.push(await get_actioninfo(altnr_, path));
+      const buffers: Item<ActionData>[] = [];
+
+      const altinfo = await fn.getbufinfo(args.denops, "#") as BufInfo[];
+      if (altinfo.length != 0) {
+        buffers.push(get_actioninfo(altinfo[0], curnr_, altnr_, currentDir));
       }
 
-      for (let i = 1; i <= lastnr_; ++i ) {
+      for (let i = 1; i <= lastnr_; ++i) {
         if (i === altnr_) {
           continue;
         }
 
-        if (! await fn.bufexists(args.denops, i)) {
+        const bufinfos = await fn.getbufinfo(args.denops, i) as BufInfo[];
+        if (bufinfos.length == 0 || !bufinfos[0].listed) {
           continue;
         }
 
-        if (! await fn.buflisted(args.denops, i)) {
-          continue;
-        }
-
-        path = await fn.expand(args.denops, `#${i}:p`) as string;
-        if (! await fn.filereadable(args.denops, path)) {
-          continue;
-        }
-
-        buffers.push(await get_actioninfo(i, path));
+        buffers.push(get_actioninfo(bufinfos[0], curnr_, altnr_, currentDir));
       }
       return buffers;
     };
