@@ -22,4 +22,3 @@ call ddu#start({'sources': [{'name': 'buffer'}]})
 ## Author
 
 KUDO Shunsuke (skudo_xx)
-

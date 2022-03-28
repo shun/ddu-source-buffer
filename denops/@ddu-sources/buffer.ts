@@ -1,12 +1,9 @@
-import {
-  BaseSource,
-  Item,
-} from "https://deno.land/x/ddu_vim@v1.1.0/types.ts";
-import { Denops, fn } from "https://deno.land/x/ddu_vim@v1.1.0/deps.ts";
-import { relative } from "https://deno.land/std@0.123.0/path/mod.ts#^";
+import { BaseSource, Item } from "https://deno.land/x/ddu_vim@v1.4.0/types.ts";
+import { Denops, fn, gather } from "https://deno.land/x/ddu_vim@v1.4.0/deps.ts";
+import { relative } from "https://deno.land/std@0.132.0/path/mod.ts#^";
 
 type ActionData = {
-  bufnr: number;
+  bufNr: number;
   path: string;
   isCurrent: boolean;
   isAlternate: boolean;
@@ -18,6 +15,14 @@ type ActionInfo = {
   action: ActionData;
 };
 
+type BufInfo = {
+  bufnr: number;
+  changed: boolean;
+  lastused: number;
+  listed: boolean;
+  name: string;
+};
+
 type Params = Record<never, never>;
 
 export class Source extends BaseSource<Params> {
@@ -26,64 +31,48 @@ export class Source extends BaseSource<Params> {
   gather(args: {
     denops: Denops;
   }): ReadableStream<Item<ActionData>[]> {
-    const get_actioninfo = async(bufnr_: number, path: string): ActionInfo => {
-      const curnr_ = await fn.bufnr(args.denops, "%");
-      const altnr_ = await fn.bufnr(args.denops, "#");
-      const name_ = await fn.bufname(args.denops, bufnr_);
-      const isCurrent_ = curnr_ === bufnr_ ? true : false;
-      const isAlternate_ = altnr_ === bufnr_ ? true : false;
-      const isModified_ = await fn.getbufvar(args.denops, bufnr_, "&modified");
+    const get_actioninfo = (
+      bufinfo: BufInfo,
+      curnr_: number,
+      altnr_: number,
+      currentDir: string,
+    ): ActionInfo => {
+      const isCurrent_ = curnr_ === bufinfo.bufnr;
+      const isAlternate_ = altnr_ === bufinfo.bufnr;
+      const isModified_ = bufinfo.changed;
 
       const curmarker_ = isCurrent_ ? "%" : "";
       const altmarker_ = isAlternate_ ? "#" : "";
       const modmarker_ = isModified_ ? "+" : "";
 
-      const dir = await fn.getcwd(args.denops) as string;
-
       return {
-        word: `${bufnr_} ${curmarker_}${altmarker_} ${modmarker_} ${relative(dir, path)}`,
+        word: `${bufinfo.bufnr} ${curmarker_}${altmarker_} ${modmarker_} ${
+          relative(currentDir, bufinfo.name)
+        }`,
         action: {
-          bufNr: bufnr_,
-          path: path,
+          bufNr: bufinfo.bufnr,
+          path: bufinfo.name,
           isCurrent: isCurrent_,
           isAlternate: isAlternate_,
           isModified: isModified_,
-        }
+        },
       };
     };
 
-    const get_buflist = async() => {
-      const buffers: Item<ActionData>[] = [];
-      const lastnr_ = await fn.bufnr(args.denops, "$");
-      const altnr_ = await fn.bufnr(args.denops, "#");
+    const get_buflist = async () => {
+      const [currentDir, curnr_, altnr_, buffers] = await gather(
+        args.denops,
+        async (denops: Denops) => {
+          await fn.getcwd(denops) as string;
+          await fn.bufnr(denops, "%");
+          await fn.bufnr(denops, "#");
+          await fn.getbufinfo(denops) as BufInfo[];
+        },
+      ) as [string, number, number, BufInfo[]];
 
-      let path = "";
-      path = await fn.expand(args.denops, `#${altnr_}:p`);
-      if (await fn.filereadable(args.denops, path)) {
-        buffers.push(await get_actioninfo(altnr_, path));
-      }
-
-      for (let i = 1; i <= lastnr_; ++i ) {
-        if (i === altnr_) {
-          continue;
-        }
-
-        if (! await fn.bufexists(args.denops, i)) {
-          continue;
-        }
-
-        if (! await fn.buflisted(args.denops, i)) {
-          continue;
-        }
-
-        path = await fn.expand(args.denops, `#${i}:p`);
-        if (! await fn.filereadable(args.denops, path)) {
-          continue;
-        }
-
-        buffers.push(await get_actioninfo(i, path));
-      }
-      return buffers;
+      return buffers.filter((b) => b.listed).sort((a, b) => {
+        return a.bufnr == curnr_ ? -1 : a.lastused - b.lastused;
+      }).map((b) => get_actioninfo(b, curnr_, altnr_, currentDir));
     };
 
     return new ReadableStream({
