@@ -73,7 +73,7 @@ export class Source extends BaseSource<Params> {
       const items: Item<ActionData>[] = [];
 
       buffers.sort((a, b) => {
-        return a.bufnr == curnr_ ? -1 : a.lastused - b.lastused
+        return a.bufnr == curnr_ ? -1 : a.lastused - b.lastused;
       }).map((b) => {
         if (b.listed) {
           items.push(get_actioninfo(b, curnr_, altnr_, currentDir));
