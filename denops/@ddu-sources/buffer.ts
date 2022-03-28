@@ -1,5 +1,5 @@
 import { BaseSource, Item } from "https://deno.land/x/ddu_vim@v1.4.0/types.ts";
-import { Denops, fn } from "https://deno.land/x/ddu_vim@v1.4.0/deps.ts";
+import { Denops, fn, gather } from "https://deno.land/x/ddu_vim@v1.4.0/deps.ts";
 import { relative } from "https://deno.land/std@0.132.0/path/mod.ts#^";
 
 type ActionData = {
@@ -18,6 +18,7 @@ type ActionInfo = {
 type BufInfo = {
   bufnr: number;
   changed: boolean;
+  lastused: number;
   listed: boolean;
   name: string;
 };
@@ -59,31 +60,26 @@ export class Source extends BaseSource<Params> {
     };
 
     const get_buflist = async () => {
-      const currentDir = await fn.getcwd(args.denops) as string;
-      const curnr_ = await fn.bufnr(args.denops, "%");
-      const altnr_ = await fn.bufnr(args.denops, "#");
-      const lastnr_ = await fn.bufnr(args.denops, "$");
+      const [currentDir, curnr_, altnr_, buffers] = await gather(
+        args.denops,
+        async (denops: Denops) => {
+          await fn.getcwd(denops) as string;
+          await fn.bufnr(denops, "%");
+          await fn.bufnr(denops, "#");
+          await fn.getbufinfo(denops) as BufInfo[];
+        },
+      ) as [string, number, number, BufInfo[]];
 
-      const buffers: Item<ActionData>[] = [];
+      const items: Item<ActionData>[] = [];
 
-      const altinfo = await fn.getbufinfo(args.denops, "#") as BufInfo[];
-      if (altinfo.length != 0 && altinfo[0].listed) {
-        buffers.push(get_actioninfo(altinfo[0], curnr_, altnr_, currentDir));
-      }
-
-      for (let i = 1; i <= lastnr_; ++i) {
-        if (i === altnr_) {
-          continue;
+      buffers.sort((a, b) => {
+        return a.bufnr == curnr_ ? -1 : a.lastused - b.lastused
+      }).map((b) => {
+        if (b.listed) {
+          items.push(get_actioninfo(b, curnr_, altnr_, currentDir));
         }
-
-        const bufinfos = await fn.getbufinfo(args.denops, i) as BufInfo[];
-        if (bufinfos.length == 0 || !bufinfos[0].listed) {
-          continue;
-        }
-
-        buffers.push(get_actioninfo(bufinfos[0], curnr_, altnr_, currentDir));
-      }
-      return buffers;
+      });
+      return items;
     };
 
     return new ReadableStream({
