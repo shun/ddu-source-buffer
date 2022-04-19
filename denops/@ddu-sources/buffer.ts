@@ -1,5 +1,5 @@
 import { BaseSource, Item } from "https://deno.land/x/ddu_vim@v1.4.0/types.ts";
-import { Denops, fn, gather } from "https://deno.land/x/ddu_vim@v1.4.0/deps.ts";
+import type { Denops } from "https://deno.land/x/ddu_vim@v1.4.0/deps.ts";
 import { relative } from "https://deno.land/std@0.132.0/path/mod.ts#^";
 
 type ActionData = {
@@ -21,6 +21,13 @@ type BufInfo = {
   lastused: number;
   listed: boolean;
   name: string;
+};
+
+type GetBufInfoReturn = {
+  currentDir: string;
+  currentBufNr: number;
+  alternateBufNr: number;
+  buffers: BufInfo[];
 };
 
 type Params = Record<never, never>;
@@ -60,19 +67,18 @@ export class Source extends BaseSource<Params> {
     };
 
     const get_buflist = async () => {
-      const [currentDir, curnr_, altnr_, buffers] = await gather(
-        args.denops,
-        async (denops: Denops) => {
-          await fn.getcwd(denops) as string;
-          await fn.bufnr(denops, "%");
-          await fn.bufnr(denops, "#");
-          await fn.getbufinfo(denops) as BufInfo[];
-        },
-      ) as [string, number, number, BufInfo[]];
+      const {
+        currentDir,
+        currentBufNr,
+        alternateBufNr,
+        buffers,
+      } = await args.denops.call(
+        'ddu#source#buffer#getbufinfo'
+      ) as GetBufInfoReturn;
 
       return buffers.filter((b) => b.listed).sort((a, b) => {
-        return a.bufnr == curnr_ ? -1 : a.lastused - b.lastused;
-      }).map((b) => get_actioninfo(b, curnr_, altnr_, currentDir));
+        return a.bufnr == currentBufNr ? -1 : a.lastused - b.lastused;
+      }).map((b) => get_actioninfo(b, currentBufNr, alternateBufNr, currentDir));
     };
 
     return new ReadableStream({
