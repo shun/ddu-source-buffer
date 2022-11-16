@@ -1,7 +1,6 @@
 function! ddu#source#buffer#getbufinfo() abort
   return {
   \  'currentDir': getcwd(),
-  \  'currentBufNr': bufnr('%'),
   \  'alternateBufNr': bufnr('#'),
   \  'buffers': map(getbufinfo(), {_, buf -> {
   \    'bufnr': buf['bufnr'],

@@ -1,4 +1,8 @@
-import { BaseSource, Item } from "https://deno.land/x/ddu_vim@v1.8.8/types.ts";
+import {
+  BaseSource,
+  Context,
+  Item,
+} from "https://deno.land/x/ddu_vim@v1.8.8/types.ts";
 import type { Denops } from "https://deno.land/x/ddu_vim@v1.8.8/deps.ts";
 import { relative } from "https://deno.land/std@0.152.0/path/mod.ts#^";
 
@@ -37,7 +41,9 @@ export class Source extends BaseSource<Params> {
 
   gather(args: {
     denops: Denops;
+    context: Context;
   }): ReadableStream<Item<ActionData>[]> {
+    const currentBufNr = args.context.bufNr;
     const get_actioninfo = (
       bufinfo: BufInfo,
       curnr_: number,
@@ -69,7 +75,6 @@ export class Source extends BaseSource<Params> {
     const get_buflist = async () => {
       const {
         currentDir,
-        currentBufNr,
         alternateBufNr,
         buffers,
       } = await args.denops.call(
