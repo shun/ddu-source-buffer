@@ -25,6 +25,20 @@ https://github.com/Shougo/ddu.vim
 https://github.com/vim-denops/denops.vim
 
 ==============================================================================
+PARAMS                                              *ddu-source-buffer-params*
+
+                                                *ddu-source-buffer-param-args*
+orderby	(string)
+	sort order for buffer list.
+	available:
+
+	"asc": simply ascending the lastused timestamp.
+	"desc": descending the lastused timestamp. 
+		but current buffer is located at the bottom.
+
+	Default: "asc"
+
+==============================================================================
 EXAMPLES                                                 *ddu-buffer-examples*
 
 >

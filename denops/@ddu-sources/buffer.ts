@@ -34,7 +34,9 @@ type GetBufInfoReturn = {
   buffers: BufInfo[];
 };
 
-type Params = Record<never, never>;
+type Params = {
+  orderby: string;
+};
 
 export class Source extends BaseSource<Params> {
   kind = "file";
@@ -42,6 +44,7 @@ export class Source extends BaseSource<Params> {
   gather(args: {
     denops: Denops;
     context: Context;
+    sourceParams: Params;
   }): ReadableStream<Item<ActionData>[]> {
     const currentBufNr = args.context.bufNr;
     const get_actioninfo = (
@@ -82,7 +85,13 @@ export class Source extends BaseSource<Params> {
       ) as GetBufInfoReturn;
 
       return buffers.filter((b) => b.listed).sort((a, b) => {
-        return a.bufnr == currentBufNr ? -1 : a.lastused - b.lastused;
+        if (args.sourceParams.orderby === "desc") {
+          if (a.bufnr === currentBufNr) return 1;
+          if (b.bufnr === currentBufNr) return -1;
+          return b.lastused - a.lastused;
+        }
+
+        return a.lastused - b.lastused;
       }).map((b) =>
         get_actioninfo(b, currentBufNr, alternateBufNr, currentDir)
       );
@@ -99,6 +108,8 @@ export class Source extends BaseSource<Params> {
   }
 
   params(): Params {
-    return {};
+    return {
+      orderby: "asc",
+    };
   }
 }
