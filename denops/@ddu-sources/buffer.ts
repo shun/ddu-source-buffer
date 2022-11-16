@@ -73,12 +73,14 @@ export class Source extends BaseSource<Params> {
         alternateBufNr,
         buffers,
       } = await args.denops.call(
-        'ddu#source#buffer#getbufinfo'
+        "ddu#source#buffer#getbufinfo",
       ) as GetBufInfoReturn;
 
       return buffers.filter((b) => b.listed).sort((a, b) => {
         return a.bufnr == currentBufNr ? -1 : a.lastused - b.lastused;
-      }).map((b) => get_actioninfo(b, currentBufNr, alternateBufNr, currentDir));
+      }).map((b) =>
+        get_actioninfo(b, currentBufNr, alternateBufNr, currentDir)
+      );
     };
 
     return new ReadableStream({
