@@ -2,9 +2,9 @@ import {
   BaseSource,
   Context,
   Item,
-} from "https://deno.land/x/ddu_vim@v1.8.8/types.ts";
-import type { Denops } from "https://deno.land/x/ddu_vim@v1.8.8/deps.ts";
-import { relative } from "https://deno.land/std@0.152.0/path/mod.ts#^";
+} from "https://deno.land/x/ddu_vim@v1.13.0/types.ts";
+import type { Denops } from "https://deno.land/x/ddu_vim@v1.13.0/deps.ts";
+import { relative } from "https://deno.land/std@0.165.0/path/mod.ts#^";
 
 type ActionData = {
   bufNr: number;
