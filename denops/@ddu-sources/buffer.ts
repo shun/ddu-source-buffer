@@ -1,9 +1,12 @@
 import {
+  ActionArguments,
+  ActionFlags,
   BaseSource,
   Context,
   Item,
 } from "https://deno.land/x/ddu_vim@v1.13.0/types.ts";
 import type { Denops } from "https://deno.land/x/ddu_vim@v1.13.0/deps.ts";
+import { fn } from "https://deno.land/x/ddu_vim@v1.13.0/deps.ts";
 import { relative } from "https://deno.land/std@0.165.0/path/mod.ts#^";
 
 type ActionData = {
@@ -108,6 +111,35 @@ export class Source extends BaseSource<Params> {
       },
     });
   }
+
+  actions = {
+    delete: async ({ denops, items }: ActionArguments<Params>) => {
+      try {
+        for (const item of items) {
+          const existed = await fn.bufexists(denops, item.action.bufNr);
+          if (!existed) {
+            throw new Error(
+              `the buffer doesn't exist> ${item.action.bufNr}: ${item.action.path}`,
+            );
+          }
+
+          const bufinfo = await denops.call("getbufinfo", item.action.bufNr);
+          if (bufinfo.length && bufinfo[0].changed === 0) {
+            await denops.cmd(`bwipeout ${item.action.bufNr}`);
+          } else {
+            throw new Error(
+              `can't delete the buffer> ${item.action.bufNr}: ${item.action.path}`,
+            );
+          }
+        }
+      } catch (err) {
+        console.error(err.message);
+        return Promise.resolve(ActionFlags.None);
+      }
+
+      return Promise.resolve(ActionFlags.RefreshItems);
+    },
+  };
 
   params(): Params {
     return {
