@@ -50,7 +50,7 @@ export class Source extends BaseSource<Params> {
     sourceParams: Params;
   }): ReadableStream<Item<ActionData>[]> {
     const currentBufNr = args.context.bufNr;
-    const get_actioninfo = (
+    const getActioninfo = (
       bufinfo: BufInfo,
       curnr_: number,
       altnr_: number,
@@ -80,7 +80,7 @@ export class Source extends BaseSource<Params> {
       };
     };
 
-    const get_buflist = async () => {
+    const getBuflist = async () => {
       const {
         currentDir,
         alternateBufNr,
@@ -97,15 +97,13 @@ export class Source extends BaseSource<Params> {
         }
 
         return a.lastused - b.lastused;
-      }).map((b) =>
-        get_actioninfo(b, currentBufNr, alternateBufNr, currentDir)
-      );
+      }).map((b) => getActioninfo(b, currentBufNr, alternateBufNr, currentDir));
     };
 
     return new ReadableStream({
       async start(controller) {
         controller.enqueue(
-          await get_buflist(),
+          await getBuflist(),
         );
         controller.close();
       },
