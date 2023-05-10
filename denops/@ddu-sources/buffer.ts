@@ -15,6 +15,7 @@ type ActionData = {
   isCurrent: boolean;
   isAlternate: boolean;
   isModified: boolean;
+  isTerminal: boolean;
 };
 
 type ActionInfo = {
@@ -34,6 +35,7 @@ type GetBufInfoReturn = {
   currentDir: string;
   alternateBufNr: number;
   buffers: BufInfo[];
+  termList: number[];
 };
 
 type Params = {
@@ -54,27 +56,34 @@ export class Source extends BaseSource<Params> {
       curnr_: number,
       altnr_: number,
       currentDir: string,
+      termSet: Set<number>,
     ): ActionInfo => {
-      const isCurrent_ = curnr_ === bufinfo.bufnr;
-      const isAlternate_ = altnr_ === bufinfo.bufnr;
-      const isModified_ = bufinfo.changed;
+      const { bufnr, changed, name } = bufinfo;
+
+      // Only vim has termSet, Only neovim has name "term://...".
+      const isTerminal = termSet.has(bufnr) || name.startsWith("term://");
+
+      const isCurrent_ = curnr_ === bufnr;
+      const isAlternate_ = altnr_ === bufnr;
+      const isModified_ = changed;
 
       const curmarker_ = isCurrent_ ? "%" : "";
       const altmarker_ = isAlternate_ ? "#" : "";
       const modmarker_ = isModified_ ? "+" : " ";
 
-      const bufnrstr_ = String(bufinfo.bufnr).padStart(2, " ");
+      const bufnrstr_ = String(bufnr).padStart(2, " ");
       const bufmark_ = `${curmarker_}${altmarker_}`.padStart(2, " ");
       return {
         word: `${bufnrstr_} ${bufmark_} ${modmarker_} ${
           relative(currentDir, bufinfo.name)
         }`,
         action: {
-          bufNr: bufinfo.bufnr,
-          path: bufinfo.name,
+          bufNr: bufnr,
+          path: name,
           isCurrent: isCurrent_,
           isAlternate: isAlternate_,
           isModified: isModified_,
+          isTerminal,
         },
       };
     };
@@ -84,9 +93,11 @@ export class Source extends BaseSource<Params> {
         currentDir,
         alternateBufNr,
         buffers,
+        termList,
       } = await args.denops.call(
         "ddu#source#buffer#getbufinfo",
       ) as GetBufInfoReturn;
+      const termSet = new Set(termList);
 
       return buffers.filter((b) => b.listed).sort((a, b) => {
         if (args.sourceParams.orderby === "desc") {
@@ -96,7 +107,9 @@ export class Source extends BaseSource<Params> {
         }
 
         return a.lastused - b.lastused;
-      }).map((b) => getActioninfo(b, currentBufNr, alternateBufNr, currentDir));
+      }).map((b) =>
+        getActioninfo(b, currentBufNr, alternateBufNr, currentDir, termSet)
+      );
     };
 
     return new ReadableStream({
