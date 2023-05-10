@@ -7,7 +7,11 @@ import {
 } from "https://deno.land/x/ddu_vim@v1.13.0/types.ts";
 import type { Denops } from "https://deno.land/x/ddu_vim@v1.13.0/deps.ts";
 import { fn } from "https://deno.land/x/ddu_vim@v1.13.0/deps.ts";
-import { relative } from "https://deno.land/std@0.165.0/path/mod.ts#^";
+import {
+  isAbsolute,
+  relative,
+} from "https://deno.land/std@0.165.0/path/mod.ts#^";
+import { isURL } from "https://deno.land/x/is_url@v1.0.1/mod.ts";
 
 type ActionData = {
   bufNr: number;
@@ -42,6 +46,8 @@ type Params = {
   orderby: string;
 };
 
+const NO_NAME_BUFFER_DISPLAY_NAME = "[No Name]";
+
 export class Source extends BaseSource<Params> {
   kind = "file";
 
@@ -51,6 +57,12 @@ export class Source extends BaseSource<Params> {
     sourceParams: Params;
   }): ReadableStream<Item<ActionData>[]> {
     const currentBufNr = args.context.bufNr;
+
+    const getDisplayPath = (fullPath: string, currentDir: string): string => {
+      const relPath = relative(currentDir, fullPath);
+      return relPath.startsWith("..") ? fullPath : relPath;
+    };
+
     const getActioninfo = (
       bufinfo: BufInfo,
       curnr_: number,
@@ -63,6 +75,9 @@ export class Source extends BaseSource<Params> {
       // Only vim has termSet, Only neovim has name "term://...".
       const isTerminal = termSet.has(bufnr) || name.startsWith("term://");
 
+      // Windows absolute paths are recognized as URL.
+      const isPathName = !isTerminal && (!isURL(name) || isAbsolute(name));
+
       const isCurrent_ = curnr_ === bufnr;
       const isAlternate_ = altnr_ === bufnr;
       const isModified_ = changed;
@@ -73,10 +88,15 @@ export class Source extends BaseSource<Params> {
 
       const bufnrstr_ = String(bufnr).padStart(2, " ");
       const bufmark_ = `${curmarker_}${altmarker_}`.padStart(2, " ");
+
+      const displayName = name === ""
+        ? NO_NAME_BUFFER_DISPLAY_NAME
+        : isPathName
+        ? getDisplayPath(name, currentDir)
+        : name;
+
       return {
-        word: `${bufnrstr_} ${bufmark_} ${modmarker_} ${
-          relative(currentDir, bufinfo.name)
-        }`,
+        word: `${bufnrstr_} ${bufmark_} ${modmarker_} ${displayName}`,
         action: {
           bufNr: bufnr,
           path: name,
