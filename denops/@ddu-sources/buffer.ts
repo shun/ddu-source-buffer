@@ -32,7 +32,6 @@ type BufInfo = {
 
 type GetBufInfoReturn = {
   currentDir: string;
-  currentBufNr: number;
   alternateBufNr: number;
   buffers: BufInfo[];
 };
