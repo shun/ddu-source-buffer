@@ -9,5 +9,16 @@ function! ddu#source#buffer#getbufinfo() abort
   \    'listed': buf['listed'],
   \    'name': buf['name'],
   \  }}),
+  \  'termList': s:termList(),
   \}
 endfunction
+
+if exists('*term_list')
+  function! s:termList() abort
+    return term_list()
+  endfunction
+else
+  function! s:termList() abort
+    return []
+  endfunction
+endif
