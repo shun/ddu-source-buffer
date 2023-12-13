@@ -4,13 +4,13 @@ import {
   BaseSource,
   Context,
   Item,
-} from "https://deno.land/x/ddu_vim@v1.13.0/types.ts";
-import type { Denops } from "https://deno.land/x/ddu_vim@v1.13.0/deps.ts";
-import { fn } from "https://deno.land/x/ddu_vim@v1.13.0/deps.ts";
+} from "https://deno.land/x/ddu_vim@v3.8.1/types.ts";
+import type { Denops } from "https://deno.land/x/ddu_vim@v3.8.1/deps.ts";
+import { fn } from "https://deno.land/x/ddu_vim@v3.8.1/deps.ts";
 import {
   isAbsolute,
   relative,
-} from "https://deno.land/std@0.165.0/path/mod.ts#^";
+} from "https://deno.land/std@0.208.0/path/mod.ts#^";
 import { isURL } from "https://deno.land/x/is_url@v1.0.1/mod.ts";
 
 type ActionData = {
