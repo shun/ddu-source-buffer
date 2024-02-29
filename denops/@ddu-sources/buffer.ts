@@ -20,6 +20,7 @@ type ActionData = {
   isAlternate: boolean;
   isModified: boolean;
   isTerminal: boolean;
+  bufType: string;
 };
 
 type ActionInfo = {
@@ -63,14 +64,16 @@ export class Source extends BaseSource<Params> {
       return relPath.startsWith("..") ? fullPath : relPath;
     };
 
-    const getActioninfo = (
+    const getActioninfo = async (
       bufinfo: BufInfo,
       curnr_: number,
       altnr_: number,
       currentDir: string,
       termSet: Set<number>,
-    ): ActionInfo => {
+    ): Promise<ActionInfo> => {
       const { bufnr, changed, name } = bufinfo;
+      const uBufType = await fn.getbufvar(args.denops, bufnr, "&buftype");
+      const bufType = (typeof(uBufType) == 'string' )? uBufType:'';
 
       // Only vim has termSet, Only neovim has name "term://...".
       const isTerminal = termSet.has(bufnr) || name.startsWith("term://");
@@ -104,6 +107,7 @@ export class Source extends BaseSource<Params> {
           isAlternate: isAlternate_,
           isModified: isModified_,
           isTerminal,
+          bufType,
         },
       };
     };
@@ -119,7 +123,7 @@ export class Source extends BaseSource<Params> {
       ) as GetBufInfoReturn;
       const termSet = new Set(termList);
 
-      return buffers.filter((b) => b.listed).sort((a, b) => {
+      return await Promise.all(buffers.filter((b) => b.listed).sort((a, b) => {
         if (args.sourceParams.orderby === "desc") {
           if (a.bufnr === currentBufNr) return 1;
           if (b.bufnr === currentBufNr) return -1;
@@ -127,9 +131,9 @@ export class Source extends BaseSource<Params> {
         }
 
         return a.lastused - b.lastused;
-      }).map((b) =>
-        getActioninfo(b, currentBufNr, alternateBufNr, currentDir, termSet)
-      );
+      }).map(async (b) =>
+        await getActioninfo(b, currentBufNr, alternateBufNr, currentDir, termSet)
+      ));
     };
 
     return new ReadableStream({
