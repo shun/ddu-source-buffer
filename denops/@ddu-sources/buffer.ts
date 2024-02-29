@@ -40,7 +40,6 @@ type GetBufInfoReturn = {
   currentDir: string;
   alternateBufNr: number;
   buffers: BufInfo[];
-  termList: number[];
 };
 
 type Params = {
