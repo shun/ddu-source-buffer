@@ -69,14 +69,13 @@ export class Source extends BaseSource<Params> {
       curnr_: number,
       altnr_: number,
       currentDir: string,
-      termSet: Set<number>,
     ): Promise<ActionInfo> => {
       const { bufnr, changed, name } = bufinfo;
       const uBufType = await fn.getbufvar(args.denops, bufnr, "&buftype");
       const bufType = (typeof(uBufType) == 'string' )? uBufType:'';
 
       // Only vim has termSet, Only neovim has name "term://...".
-      const isTerminal = termSet.has(bufnr) || name.startsWith("term://");
+      const isTerminal = bufType === "terminal"
 
       // Windows absolute paths are recognized as URL.
       const isPathName = !isTerminal && (!isURL(name) || isAbsolute(name));
@@ -117,12 +116,9 @@ export class Source extends BaseSource<Params> {
         currentDir,
         alternateBufNr,
         buffers,
-        termList,
       } = await args.denops.call(
         "ddu#source#buffer#getbufinfo",
       ) as GetBufInfoReturn;
-      const termSet = new Set(termList);
-
       return await Promise.all(buffers.filter((b) => b.listed).sort((a, b) => {
         if (args.sourceParams.orderby === "desc") {
           if (a.bufnr === currentBufNr) return 1;
@@ -132,7 +128,7 @@ export class Source extends BaseSource<Params> {
 
         return a.lastused - b.lastused;
       }).map(async (b) =>
-        await getActioninfo(b, currentBufNr, alternateBufNr, currentDir, termSet)
+        await getActioninfo(b, currentBufNr, alternateBufNr, currentDir)
       ));
     };
 
