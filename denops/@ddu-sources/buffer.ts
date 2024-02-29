@@ -150,19 +150,20 @@ export class Source extends BaseSource<Params> {
     delete: async ({ denops, items }: ActionArguments<Params>) => {
       try {
         for (const item of items) {
-          const existed = await fn.bufexists(denops, item.action.bufNr);
+          const action = item.action as ActionData;
+          const existed = await fn.bufexists(denops, action.bufNr);
           if (!existed) {
             throw new Error(
-              `the buffer doesn't exist> ${item.action.bufNr}: ${item.action.path}`,
+              `the buffer doesn't exist> ${action.bufNr}: ${action.path}`,
             );
           }
 
-          const bufinfo = await denops.call("getbufinfo", item.action.bufNr);
+          const bufinfo = await denops.call("getbufinfo", action.bufNr);
           if (bufinfo.length && bufinfo[0].changed === 0) {
-            await denops.cmd(`bwipeout ${item.action.bufNr}`);
+            await denops.cmd(`bwipeout ${action.bufNr}`);
           } else {
             throw new Error(
-              `can't delete the buffer> ${item.action.bufNr}: ${item.action.path}`,
+              `can't delete the buffer> ${action.bufNr}: ${action.path}`,
             );
           }
         }
