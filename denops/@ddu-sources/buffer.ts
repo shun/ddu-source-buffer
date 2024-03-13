@@ -4,13 +4,13 @@ import {
   BaseSource,
   Context,
   Item,
-} from "https://deno.land/x/ddu_vim@v3.8.1/types.ts";
-import type { Denops } from "https://deno.land/x/ddu_vim@v3.8.1/deps.ts";
-import { fn } from "https://deno.land/x/ddu_vim@v3.8.1/deps.ts";
+} from "https://deno.land/x/ddu_vim@v3.10.3/types.ts";
+import type { Denops } from "https://deno.land/x/ddu_vim@v3.10.3/deps.ts";
+import { fn } from "https://deno.land/x/ddu_vim@v3.10.3/deps.ts";
 import {
   isAbsolute,
   relative,
-} from "https://deno.land/std@0.208.0/path/mod.ts#^";
+} from "https://deno.land/std@0.219.1/path/mod.ts#^";
 import { isURL } from "https://deno.land/x/is_url@v1.0.1/mod.ts";
 
 type ActionData = {
@@ -71,10 +71,10 @@ export class Source extends BaseSource<Params> {
     ): Promise<ActionInfo> => {
       const { bufnr, changed, name } = bufinfo;
       const uBufType = await fn.getbufvar(args.denops, bufnr, "&buftype");
-      const bufType = (typeof(uBufType) == 'string' )? uBufType:'';
+      const bufType = (typeof uBufType == "string") ? uBufType : "";
 
       // Only vim has termSet, Only neovim has name "term://...".
-      const isTerminal = bufType === "terminal"
+      const isTerminal = bufType === "terminal";
 
       // Windows absolute paths are recognized as URL.
       const isPathName = !isTerminal && (!isURL(name) || isAbsolute(name));
@@ -118,17 +118,19 @@ export class Source extends BaseSource<Params> {
       } = await args.denops.call(
         "ddu#source#buffer#getbufinfo",
       ) as GetBufInfoReturn;
-      return await Promise.all(buffers.filter((b) => b.listed).sort((a, b) => {
-        if (args.sourceParams.orderby === "desc") {
-          if (a.bufnr === currentBufNr) return 1;
-          if (b.bufnr === currentBufNr) return -1;
-          return b.lastused - a.lastused;
-        }
+      return await Promise.all(
+        buffers.filter((b) => b.listed).sort((a, b) => {
+          if (args.sourceParams.orderby === "desc") {
+            if (a.bufnr === currentBufNr) return 1;
+            if (b.bufnr === currentBufNr) return -1;
+            return Number(b.lastused - a.lastused);
+          }
 
-        return a.lastused - b.lastused;
-      }).map(async (b) =>
-        await getActioninfo(b, currentBufNr, alternateBufNr, currentDir)
-      ));
+          return Number(a.lastused - b.lastused);
+        }).map(async (b) =>
+          await getActioninfo(b, currentBufNr, alternateBufNr, currentDir)
+        ),
+      );
     };
 
     return new ReadableStream({
@@ -153,8 +155,11 @@ export class Source extends BaseSource<Params> {
             );
           }
 
-          const bufinfo = await denops.call("getbufinfo", action.bufNr);
-          if (bufinfo.length && bufinfo[0].changed === 0) {
+          const bufinfo = await denops.call(
+            "getbufinfo",
+            action.bufNr,
+          ) as BufInfo[];
+          if (bufinfo.length && !bufinfo[0].changed) {
             await denops.cmd(`bwipeout ${action.bufNr}`);
           } else {
             throw new Error(
