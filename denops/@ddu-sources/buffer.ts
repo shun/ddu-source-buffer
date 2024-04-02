@@ -10,7 +10,7 @@ import { fn } from "https://deno.land/x/ddu_vim@v3.10.3/deps.ts";
 import {
   isAbsolute,
   relative,
-} from "https://deno.land/std@0.219.1/path/mod.ts#^";
+} from "https://deno.land/std@0.221.0/path/mod.ts#^";
 import { isURL } from "https://deno.land/x/is_url@v1.0.1/mod.ts";
 
 type ActionData = {
@@ -123,10 +123,10 @@ export class Source extends BaseSource<Params> {
           if (args.sourceParams.orderby === "desc") {
             if (a.bufnr === currentBufNr) return 1;
             if (b.bufnr === currentBufNr) return -1;
-            return Number(b.lastused - a.lastused);
+            return Number(BigInt(b.lastused) - BigInt(a.lastused));
           }
 
-          return Number(a.lastused - b.lastused);
+          return Number(BigInt(a.lastused) - BigInt(b.lastused));
         }).map(async (b) =>
           await getActioninfo(b, currentBufNr, alternateBufNr, currentDir)
         ),
